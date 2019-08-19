@@ -1,0 +1,12 @@
+camera,start,0
+camera,start,1
+server,start,60,0
+server,start,61,1
+camera,mode,true,0
+camera,mode,true,1
+camera,q,0,6
+camera,q,1,6
+server,frame,0,22
+server,frame,1,22
+
+
