@@ -7,6 +7,7 @@ import time
 import numpy as np
 import cv2
 import datetime
+import random
 
 class SocketClient:
     host = '127.0.0.1'      # default ip address
@@ -20,10 +21,13 @@ class SocketClient:
 
     curConnection = None    #Current connection.
 
+    curTime = None
+
     def __init__(self, ipaddress, port):
         print('Setting up the socket client')
         self.host = ipaddress
         self.port = port
+        self.curTime = time.localtime(time.time())
 
     def clientConnect(self):
         print('Connecting to: ', self.host + ':' + str(self.port))
@@ -107,7 +111,8 @@ class SocketClient:
                                 #Protecting the image display from the network issues.
                                 try:
 
-                                    MAZE_NAME = 'frameName' + self.host + ':' + str(self.port)
+
+                                    MAZE_NAME = 'frameName' + self.host + ':' + str(self.port) + ' - ' + str(self.curTime)
                                     curSize = cv2.getWindowImageRect(MAZE_NAME)
 
                                     window = cv2.namedWindow(MAZE_NAME, cv2.WINDOW_NORMAL)
