@@ -22,7 +22,7 @@ def main():
     commandBuffer = []  # Buffer for auto mode.
 
     #Setting up the thread to monitor servers.
-    runServerMonitor = True;
+    runServerMonitor = True
     t = threading.Thread(target=threadMonitorServers, args=())
     t.start()
 
@@ -133,8 +133,10 @@ def processCommand(command):
 
         # Stopping all cameras.
         for cam in robotCameras:
-            cam.stopCapture()
             cam.stopRecord()
+            cam.stopCapture()
+
+
 
     if "server" in command:
         if commandBreak[1] == 'start':

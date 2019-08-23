@@ -31,8 +31,10 @@ class SocketServer:
         t = threading.Thread(target=self.threadRunSever, args=())
         t.start()
 
-        r = threading.Thread(target=self.threadIncomingData, args=())
-        r.start()
+        #r = threading.Thread(target=self.threadIncomingData, args=())
+        #r.start()
+
+
 
 
 
@@ -55,6 +57,9 @@ class SocketServer:
                 # Starting a server connection for this client.
                 t = threading.Thread(target=self.on_new_client, args=(conn, addr,))
                 t.start()
+
+                r = threading.Thread(target=self.threadIncomingData, args=(conn,))
+                r.start()
 
                 # self.currentConnection = conn   #Passing out the connection to main.
                 # while True:
@@ -85,6 +90,7 @@ class SocketServer:
         self.clients.append(clientsocket)
 
         while True:
+
             # data = conn.recv(1024)
             # print('Data in: ', data)
             # if not data:
@@ -106,10 +112,10 @@ class SocketServer:
         for c in self.clients:
             c.sendall(data)
 
-    def threadIncomingData(self):
+    def threadIncomingData(self, conn):
         while(self.runSocketServer == True):
-            if(self.currentConnection != None):
-                data = self.currentConnection.recv(1024)
+            if(conn != None):
+                data = conn.recv(1024)
                 if not data:
                     time.sleep(1)
                 else:

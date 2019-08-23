@@ -1,0 +1,8 @@
+camera,start,0
+server,start,1234,0
+camera,mode,true,0
+camera,q,0,6
+server,frame,0,22
+camera,record,start,0,d:\Temp\
+
+
