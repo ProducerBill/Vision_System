@@ -12,8 +12,8 @@ import datetime
 class Camera:
     cameraID = None    # camera id
     curCam = None  # camera hardware object.
-    imageWidth = 640    # default image width
-    imageHieght = 480   # default image height
+    imageWidth = 1280   # default image width
+    imageHieght = 720   # default image height
     imageQly = 20      # default image quality
     imageGrayMode = False   #Gray scale mode.
     imageEdgeMode = False   #Edge process mode.
@@ -25,6 +25,7 @@ class Camera:
     tempData = None     #Temp data to pass to other operations.
 
     #Setting up the capture
+    baseLOC = None
     captureFileName = None
     captureCodec = None
     captureOutput = None
@@ -34,21 +35,27 @@ class Camera:
     startRecordingDateTime = None
 
     #Length of time to record.
-    recordLength = 10
+    recordLength = 5
 
     # Init of the camera object.
     def __init__(self, id):
         self.cameraID = id  # Hardward id of camera
-        self.setupCamera()
+        #self.setupCamera()
 
 
     # Sets up the camera hardware connection.
-    def setupCamera(self):
+    def setupCamera(self, width, height):
         self.curCam = cv2.VideoCapture(int(self.cameraID))   # Init the camera
         time.sleep(1.0)
 
-        self.curCam.set(3, self.imageHieght)   # setting the capture height
-        self.curCam.set(4, self.imageWidth)    # setting the capture width
+        self.imageHieght = int(height)
+        self.imageWidth = int(width)
+
+        #self.curCam.set(3, self.imageHieght)   # setting the capture height
+        #self.curCam.set(4, self.imageWidth)    # setting the capture width
+
+        self.curCam.set(cv2.CAP_PROP_FRAME_HEIGHT, self.imageHieght)  # setting the capture height
+        self.curCam.set(cv2.CAP_PROP_FRAME_WIDTH, self.imageWidth)  # setting the capture width
 
     def setPreview(self, state):
         self.showOutput = state
@@ -75,21 +82,28 @@ class Camera:
 
     def startRecord(self, loc):
 
+        #The dir of where the files will be stored.
+        self.baseLOC = loc;
+
         # Setting up the capture
         self.captureFileName = loc + 'capture' + str(self.cameraID) + '-' + datetime.datetime.now().strftime(
             "%Y-%m-%d-%H%M") + '.mp4'
         self.captureCodec = cv2.VideoWriter_fourcc(*'mp4v')
+        #self.captureCodec = cv2.VideoWriter_fourcc('M', 'J', 'P', 'G')
         self.captureOutput = cv2.VideoWriter(self.captureFileName, self.captureCodec, 40.0,
                                              (self.imageWidth, self.imageHieght))
 
+        #Getting the time the recording started
+        self.startRecordingDateTime = datetime.datetime.now()
 
         self.runRecord = True
-        print('Recording started.')
+
+        print('Recording started. ' + self.captureFileName)
 
     def stopRecord(self):
         self.runRecord = False
 
-        self.captureOutput.release()  # Releasing the recording.
+        #self.captureOutput.release()  # Releasing the recording.
         print('Recording stopped.')
 
     def setQuality(self, quality):
@@ -115,9 +129,16 @@ class Camera:
             #Saving the capture file to the harddrive.
             if self.runRecord == True:
                 try:
-                    self.captureOutput.write(frame)
+                    expired = self.startRecordingDateTime + datetime.timedelta(minutes=int(self.recordLength))
+                    if expired > datetime.datetime.now():
+                        self.captureOutput.write(frame)
+                    else:
+                        self.captureOutput.write(frame)
+                        self.captureOutput.release()  # Releasing the recording.
+                        self.startRecord(self.baseLOC)
+
                 except:
-                    print('Unable to write to video file.')
+                    print('Unable to write to video file. ' + self.captureFileName)
             else:
                 if (self.captureOutput != None):
                     self.captureOutput.release()  # Releasing the recording.
@@ -145,7 +166,7 @@ class Camera:
             #Show preview option
             if(self.showOutput):
                 frameName = "Frame: " + str(self.cameraID)
-                cv2.imshow(frameName,frame)
+                cv2.imshow(frameName, frame)
 
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break

@@ -81,7 +81,12 @@ def processCommand(command):
     if "camera" in command:
         if (commandBreak[1] == 'start'):
             robotCameras.append(camera.Camera(int(commandBreak[2])))
-            robotCameras[len(robotCameras) - 1].setupCamera()
+
+            if len(commandBreak) > 3:
+                robotCameras[len(robotCameras) - 1].setupCamera(commandBreak[3], commandBreak[4])
+            else:
+                robotCameras[len(robotCameras) - 1].setupCamera(640, 480)
+
             robotCameras[len(robotCameras) - 1].setPreview(False)
             robotCameras[len(robotCameras) - 1].startCapture()
 
