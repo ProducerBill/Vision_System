@@ -7,7 +7,6 @@ import time
 import numpy as np
 import cv2
 import datetime
-import random
 
 class SocketClient:
     host = '127.0.0.1'      # default ip address
@@ -21,13 +20,13 @@ class SocketClient:
 
     curConnection = None    #Current connection.
 
-    curTime = None
+    curConState = False     #Current state of the connection to server.
+    conReconnect = True     #Connection will try to reconnect if disconnected.
 
     def __init__(self, ipaddress, port):
         print('Setting up the socket client')
         self.host = ipaddress
         self.port = port
-        self.curTime = time.localtime(time.time())
 
     def clientConnect(self):
         print('Connecting to: ', self.host + ':' + str(self.port))
@@ -50,13 +49,29 @@ class SocketClient:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.connect((self.host, self.port))
             self.curConnection = s      #Passing out the connection.
+            self.curConState = True;    #Setting the connection set to connected.
             while(self.runClient):
 
-                # s.sendall(b'Hello, world')
-                #data = s.recv(1024)
-                data = s.recv(200000)
+                try:
+                    data = s.recv(200000)
+                    self.dataBuffer += bytearray(data)
+                except Exception as e:
+                    #print("Socket Error: " + str(e))
+                    s.close()
+                    self.curConState = False
+                    #Reconnect
 
-                self.dataBuffer += bytearray(data)
+                if self.curConState == False and self.conReconnect:
+                    #print("Attempting to reconnect.")
+                    time.sleep(1)
+                    try:
+                        s.connect((self.host, self.port))
+                        self.curConnection = s
+                        self.curConState = True
+                    except:
+                        #print("Unable to connect")
+                        self.curConState = False
+
 
     def threadDecodePacket(self):
         while(self.runClient):
@@ -111,8 +126,7 @@ class SocketClient:
                                 #Protecting the image display from the network issues.
                                 try:
 
-
-                                    MAZE_NAME = 'frameName' + self.host + ':' + str(self.port) + ' - ' + str(self.curTime)
+                                    MAZE_NAME = 'frameName' + self.host + ':' + str(self.port)
                                     curSize = cv2.getWindowImageRect(MAZE_NAME)
 
                                     window = cv2.namedWindow(MAZE_NAME, cv2.WINDOW_NORMAL)
