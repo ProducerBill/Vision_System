@@ -168,6 +168,10 @@ class Camera:
                 frameName = "Frame: " + str(self.cameraID)
                 cv2.imshow(frameName, frame)
 
+            #Taking an image
+            if cv2.waitKey(1) & 0xFF == ord('p'):
+                cv2.imwrite(str(self.cameraID) + 'image.png', frame)
+
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
 
