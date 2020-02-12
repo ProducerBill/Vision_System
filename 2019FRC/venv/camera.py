@@ -12,6 +12,7 @@ import datetime
 class Camera:
     cameraID = None    # camera id
     curCam = None  # camera hardware object.
+    curFrame = None     # camera current image frame.
     imageWidth = 1280   # default image width
     imageHieght = 720   # default image height
     imageQly = 20      # default image quality
@@ -86,12 +87,22 @@ class Camera:
         self.baseLOC = loc;
 
         # Setting up the capture
-        self.captureFileName = loc + 'capture' + str(self.cameraID) + '-' + datetime.datetime.now().strftime(
-            "%Y-%m-%d-%H%M") + '.mp4'
-        self.captureCodec = cv2.VideoWriter_fourcc(*'mp4v')
+        #self.captureFileName = loc + 'capture' + str(self.cameraID) + '-' + datetime.datetime.now().strftime(
+        #    "%Y-%m-%d-%H%M") + '.mp4'
+        #self.captureCodec = cv2.VideoWriter_fourcc(*'mp4v')
         #self.captureCodec = cv2.VideoWriter_fourcc('M', 'J', 'P', 'G')
-        self.captureOutput = cv2.VideoWriter(self.captureFileName, self.captureCodec, 40.0,
+        #self.captureOutput = cv2.VideoWriter(self.captureFileName, self.captureCodec, 40.0,
+        #                                     (self.imageWidth, self.imageHieght))
+
+
+
+        self.captureFileName = loc + 'capture' + str(self.cameraID) + '-' + datetime.datetime.now().strftime(
+            "%Y-%m-%d-%H%M") + '.avi'
+        self.captureCodec = cv2.VideoWriter_fourcc('M', 'J', 'P', 'G')
+        self.captureOutput = cv2.VideoWriter(self.captureFileName, self.captureCodec, 30.0,
                                              (self.imageWidth, self.imageHieght))
+
+
 
         #Getting the time the recording started
         self.startRecordingDateTime = datetime.datetime.now()
@@ -122,9 +133,15 @@ class Camera:
         self.showDebug = mode
         print('Debug mode started.')
 
+    def getImageFrame(self,):
+        return self.curFrame
+
     def threadCapture(self, state, showOutput):
         while(self.runCapture):
             ret, frame = self.curCam.read()     #Reading the frame from the camera
+
+            # Coping the current frame out.
+            self.curFrame = frame.copy()
 
             #Saving the capture file to the harddrive.
             if self.runRecord == True:

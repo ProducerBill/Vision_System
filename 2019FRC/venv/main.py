@@ -129,6 +129,12 @@ def processCommand(command):
             else:
                 robotCameras[int(commandBreak[3])].setDebugMode(False)
 
+        # Command for processing camera for target system.
+        if(commandBreak[1] == 'target'):
+            curImage = robotCameras[int(commandBreak[2])].getImageFrame()
+            print('Test')
+
+
     if "exit" in command:
 
         # Stopping all cameras.
