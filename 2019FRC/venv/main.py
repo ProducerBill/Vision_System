@@ -6,10 +6,12 @@ import sys, os
 import time
 import unicodedata
 import threading
+import targeting as tar
 
 robotCameras = []   #Array for the cameras
 imageServer = []  #Server for sending out data.
 imageClient = []    #Array of client connections.
+targetSystems = []  #Array of target processors.
 
 runServerMonitor = True     #Controls the server monitoring the return messages.
 
@@ -129,11 +131,6 @@ def processCommand(command):
             else:
                 robotCameras[int(commandBreak[3])].setDebugMode(False)
 
-        # Command for processing camera for target system.
-        if(commandBreak[1] == 'target'):
-            curImage = robotCameras[int(commandBreak[2])].getImageFrame()
-            print('Test')
-
 
     if "exit" in command:
 
@@ -176,6 +173,19 @@ def processCommand(command):
 
     if "sleep" in command:
         time.sleep(float(commandBreak[1]))
+        
+    if "target" in command:
+        if(commandBreak[1] == 'start'):
+
+            if len(commandBreak) > 2:
+                print('starting target')
+                targetSystems.append(tar.Targeting(robotCameras[int(commandBreak[2])]))
+        
+        if(commandBreak[1] == 'stop'):
+            if len(commandBreak) > 3:
+                print('Stopping target')
+                targetSystems[int(commandBreak[2])].stopTargeting()
+
 
     if "shutdown" in command:
         print('Shutdown command received.')
