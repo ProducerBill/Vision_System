@@ -179,12 +179,15 @@ def processCommand(command):
 
             if len(commandBreak) > 2:
                 print('starting target')
-                targetSystems.append(tar.Targeting(robotCameras[int(commandBreak[2])]))
+                targetSystems.append(tar.Targeting(robotCameras[int(commandBreak[2])], 'run'))
         
         if(commandBreak[1] == 'stop'):
             if len(commandBreak) > 3:
                 print('Stopping target')
                 targetSystems[int(commandBreak[2])].stopTargeting()
+
+        if(commandBreak[1] == 'test'):
+            targetSystems.append(tar.Targeting(None, 'test'))
 
 
     if "shutdown" in command:

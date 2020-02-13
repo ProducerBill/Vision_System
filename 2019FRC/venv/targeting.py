@@ -12,12 +12,20 @@ class Targeting:
 
     imgSouce = None
     runTargetProcess = False;
+    mode = 'test'   # Mode of processing.
 
 
 
-    def __init__(self, source):
+    def __init__(self, source, mode):
         print('Starting Target')
-        self.imgSouce = source
+
+        if(mode == 'run'):
+            self.mode = 'run'
+            self.imgSouce = source
+
+        if(mode == 'test'):
+            print('Target test mode.')
+            self.mode = 'test'
 
         #Starting target processing.
         self.runTargetProcess = True;
@@ -309,10 +317,13 @@ class Targeting:
 
     def threadProcess(self):
         while(self.runTargetProcess):
-            #img = self.imgSouce.getImageFrame()
-            
-            img = self.screemGrab()
-            img = cv2.cvtColor(img, cv2.COLOR_BGRA2BGR)
+
+            if(self.mode == 'run'):     # Run with camera mode.
+                img = self.imgSouce.getImageFrame()
+
+            if(self.mode == 'test'):
+                img = self.screemGrab()     # Grabing from screen.
+                img = cv2.cvtColor(img, cv2.COLOR_BGRA2BGR)     # Converting compatible format.
             
             self.findTargets(img)
 
@@ -321,4 +332,4 @@ class Targeting:
             
 
             #Pausing to reduce CPU loading.
-            time.sleep(0.1)
+            time.sleep(0.05)
