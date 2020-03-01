@@ -27,6 +27,12 @@ class Targeting:
     curTarYPos = 0.0
     curTarYOffset = 0.0
 
+    #Is a target found?
+    targetFound = False
+
+    # Current main color mask
+    curMainMask = None
+
 
 
     def __init__(self, source, mode):
@@ -40,6 +46,13 @@ class Targeting:
             print('Target test mode.')
             self.mode = 'test'
 
+
+        self.curMainMask = ([
+            [np.array((([0, 50, 50]))), np.array(([8, 255, 255]))]  #Red left
+            , [np.array((([170, 150, 130]))), np.array(([188, 255, 255]))]  #Red right
+            , [np.array((([63, 43, 59]))), np.array((([111, 102, 187])))]   #Blue
+        ])
+
         #Starting target processing.
         self.runTargetProcess = True;
         tTargeting = threading.Thread(target=self.threadProcess, args=())
@@ -47,6 +60,19 @@ class Targeting:
         
     def stopTartgeting(self):
         self.runTargetProcess = False
+
+    def setColorMode(self,mode):
+        if(mode == 'red'):
+            self.curMainMask = ([
+                [np.array((([0, 50, 50]))), np.array(([8, 255, 255]))]  #Red left
+                , [np.array((([170, 150, 130]))), np.array(([188, 255, 255]))]  #Red right
+            ])
+
+        if(mode =='blue'):
+            self.curMainMask =([
+                [np.array((([63, 43, 59]))), np.array((([111, 102, 187])))]  # Blue
+            ])
+
 
     def stackImages(self, scale, imgArray):
         rows = len(imgArray)
@@ -115,6 +141,22 @@ class Targeting:
         # Returning the results.
         return result
 
+    def replaceColorRange(self, img, MaskColors, NewColor):
+        hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+
+        masks = []
+
+        # Building the mask to find just the colors input.
+        for msk in MaskColors:
+            masks.append(cv2.inRange(hsv, msk[0], msk[1]))
+
+        mask = None
+
+        mask = sum(masks)
+
+        img[mask>0] = NewColor
+        return img
+
     def blurImage(self, img):
         imgBlur = cv2.GaussianBlur(img, (7, 7), 2)
         return imgBlur
@@ -160,11 +202,12 @@ class Targeting:
 
     def drawContours(self, imgTemp, contours):
         for cnt in contours:
-            area = cv2.contourArea(cnt)
+            #area = cv2.contourArea(cnt)
             cv2.drawContours(imgTemp, cnt, -1, (255, 0, 255), 7)
             peri = cv2.arcLength(cnt, True)
             approx = cv2.approxPolyDP(cnt, 0.02 * peri, True)
             x, y, w, h = cv2.boundingRect(approx)
+            area = w * h
             cv2.rectangle(imgTemp, (x, y), (x + w, y + h), (0, 255, 0), 5)
 
             cv2.putText(imgTemp, "Points: " + str(len(approx)), (x + w + 20, y + 20), cv2.FONT_HERSHEY_COMPLEX, .7,
@@ -188,9 +231,29 @@ class Targeting:
                            (0,255,0), 2)
         return imgTemp
 
+    def paintHorTarget(self, imgTemp, contour):
+        height, width, channels = imgTemp.shape
+        peri = cv2.arcLength(contour, True)
+        approx = cv2.approxPolyDP(contour, 0.02 * peri, True)
+        x, y, w, h = cv2.boundingRect(approx)
+
+        # Finding X offset to target.
+        self.curTarYPos = y + (int)(h / 2)
+
+        imgTemp = cv2.line(imgTemp, (0, self.curTarYPos),
+                           (width, self.curTarYPos),
+                           (0, 255, 0), 2)
+        return imgTemp
+
     def drawOffsets(self, imgTemp):
-        cv2.putText(imgTemp, "X: " + str(), (x + w + 20, y + 45), cv2.FONT_HERSHEY_COMPLEX, 0.7,
-                    (0, 255, 0), 2)
+        cv2.putText(imgTemp, "X Off: " + str(self.curTarXPos - self.imgXPos), (0, 30), cv2.FONT_HERSHEY_COMPLEX, 1,
+                    (0, 0, 0), 4)
+
+        cv2.putText(imgTemp, "Y Off: " + str(self.curTarYPos), (0, 80), cv2.FONT_HERSHEY_COMPLEX, 1,
+                    (0, 0, 0), 4)
+
+        cv2.putText(imgTemp, "Target: " + str(self.targetFound), (0, 130), cv2.FONT_HERSHEY_COMPLEX, 1,
+                    (0, 0, 0), 4)
 
         return imgTemp
 
@@ -221,14 +284,14 @@ class Targeting:
         # maskColor = ([[lTLowerHSV, lTUpperHSV]])
 
         # Real ranges for Red
-        maskColor = ([
-            [np.array((([0, 50, 50]))), np.array(([8, 255, 255]))]
-            , [np.array((([170, 150, 130]))), np.array(([180, 255, 255]))]
-            , [np.array((([63, 43, 59]))), np.array((([111, 102, 187])))]
-        ])
+        #maskColor = ([
+        #    [np.array((([0, 50, 50]))), np.array(([8, 255, 255]))]
+        #    , [np.array((([175, 100, 130]))), np.array(([187, 255, 255]))]
+        #    , [np.array((([63, 43, 59]))), np.array((([111, 102, 187])))]
+        #])
 
         # fliter image for color.
-        filterImg = self.filterColor(lowerImg, maskColor)
+        filterImg = self.filterColor(lowerImg, self.curMainMask)
 
         # For filter debug
         # cv2.imshow("First Filter", filterImg)
@@ -269,23 +332,31 @@ class Targeting:
             lTar = LTContours[0]
 
             for cnt in LTContours:
-                areaCnt = cv2.contourArea(cnt)
-                arealTar = cv2.contourArea(lTar)
+                approxCur = cv2.approxPolyDP(cnt, 0.02 * cv2.arcLength(cnt, True), True)
+                approxlTar = cv2.approxPolyDP(lTar, 0.02 * cv2.arcLength(lTar, True), True)
+                x1, y1, w1, h1 = cv2.boundingRect(approxCur)
+                x2, y2, w2, h2 = cv2.boundingRect(approxlTar)
+                areaCnt = w1 * h1
+                arealTar = w2 * h2
+
                 if areaCnt > arealTar:
                     lTar = cnt
 
-            area = cv2.contourArea(lTar)
+            approxlTar = cv2.approxPolyDP(lTar, 0.02 * cv2.arcLength(lTar, True), True)
+            x, y, w, h = cv2.boundingRect(approxlTar)
+            area = w * h
+
             if area > 2000 and area < 55000:
                 peri = cv2.arcLength(lTar, True)
                 approx = cv2.approxPolyDP(lTar, 0.02 * peri, True)
                 x, y, w, h = cv2.boundingRect(approx)
                 # if len(approx) >= 8:
                 if x > 0 and y > 0:
-                    upperImg = imgP2[0: int(w * 1.3), x: x + w]
+                    upperImg = imgP2[0: y, x: x + w] #lowerImg = img[(int)(height / 2): height, 0: width]
                     # cv2.imshow("UpperArea", upperImg)
 
                     #Painting the center of detected target bottom.
-                    imgFP = self.paintVerTarget(imgFP, cnt)
+                    imgFP = self.paintVerTarget(imgFP, lTar)
 
                     # Start of second tier processing.
                     # manualTune(upperImg)
@@ -294,13 +365,22 @@ class Targeting:
                     HTContours = self.matchContourToMaster(HTContours, ([0, x]))
                     imgFP = self.drawContours(imgFP, HTContours)
 
+                    #Painting upper target
+                    if(len(HTContours) > 0):
+                        self.targetFound = True;
+                        imgFP = self.paintHorTarget(imgFP, HTContours[0])
+                    else:
+                        self.targetFound = False
+        else:
+            self.targetFound = False
+
 
 
         # Painting the X target.
         imgFP = cv2.line(imgFP, ((int)(self.imgXPos), 0), ((int)(self.imgXPos), height), (0, 0, 255), 2)
 
         #shoing onscreen the current offsets.
-
+        imgFP = self.drawOffsets(imgFP)
 
         cv2.imshow("Final", imgFP)
 
@@ -310,10 +390,23 @@ class Targeting:
 
     def findUpperTarget(self, upperImg):
 
+        #Bluring the in image.
+        imgBlur = self.blurImage(upperImg)
+
+        #Replace Black with Green
+        upperImg = self.replaceColorRange(imgBlur.copy(), ([[np.array((([0, 0, 0]))), np.array(((255, 255, 50)))]]), (0, 255, 0))
+
+
         # Upper Mask Values Red Values
-        hTLowerHSV = np.array(([0, 0, 0]))
-        hTUpperHSV = np.array(([179, 255, 255]))
+        hTLowerHSV = np.array(([40, 200, 200]))
+        hTUpperHSV = np.array(([60, 255, 255]))
         maskColor2 = ([[hTLowerHSV, hTUpperHSV]])
+
+        #maskColor2 = ([
+        #    [np.array((([0, 50, 50]))), np.array(([8, 255, 255]))]
+        #    , [np.array((([170, 150, 130]))), np.array(([180, 255, 255]))]
+        #    , [np.array((([63, 43, 59]))), np.array((([111, 102, 187])))]
+        #])
 
         # fliter image for color.
         filterImg = self.filterColor(upperImg, maskColor2)
@@ -350,11 +443,11 @@ class Targeting:
         # cv2.imshow("UpperDil", imgDil)
 
         # Finding the contours
-        HTContours = self.getContours(imgDil, upperImg.copy(), 1500, 60000)
+        HTContours = self.getContours(imgDil, upperImg.copy(), 500, 60000)
 
         imgFP = self.drawContours(upperImg, HTContours)
 
-        cv2.imshow("Upper", self.stackImages(1.0, ([upperImg, filterImg, imgGray],
+        cv2.imshow("Upper", self.stackImages(0.5, ([upperImg, filterImg, imgGray],
                                             [imgSharp, imgBlur, imgFP],
                                             [imgEdges, imgDil, imgFP])))
 

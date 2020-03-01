@@ -189,6 +189,9 @@ def processCommand(command):
         if(commandBreak[1] == 'test'):
             targetSystems.append(tar.Targeting(None, 'test'))
 
+        if(commandBreak[1] == 'mode'):
+            targetSystems[int(commandBreak[2])].setColorMode(commandBreak[3])
+
 
     if "shutdown" in command:
         print('Shutdown command received.')
