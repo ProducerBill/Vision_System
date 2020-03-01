@@ -14,6 +14,19 @@ class Targeting:
     runTargetProcess = False;
     mode = 'test'   # Mode of processing.
 
+    # Setting to the point we want to target.
+    camCenterToShooterCenterOffset = 0.0
+    camTopToShooterBottom = 0.0
+    imgXPos = 0.0
+    ballDiaAtTarget = 0.0
+    distanceToWall = 0.0
+
+    # Targeting outputs
+    curTarXPos = 0.0
+    curTarXOffset = 0.0
+    curTarYPos = 0.0
+    curTarYOffset = 0.0
+
 
 
     def __init__(self, source, mode):
@@ -161,6 +174,26 @@ class Targeting:
 
         return imgTemp
 
+    def paintVerTarget(self, imgTemp, contour):
+        height, width, channels = imgTemp.shape
+        peri = cv2.arcLength(contour, True)
+        approx = cv2.approxPolyDP(contour, 0.02 * peri, True)
+        x, y, w, h = cv2.boundingRect(approx)
+
+        #Finding X offset to target.
+        self.curTarXPos = x + (int)(w/2)
+
+        imgTemp = cv2.line(imgTemp, (self.curTarXPos, 0),
+                           (self.curTarXPos, height),
+                           (0,255,0), 2)
+        return imgTemp
+
+    def drawOffsets(self, imgTemp):
+        cv2.putText(imgTemp, "X: " + str(), (x + w + 20, y + 45), cv2.FONT_HERSHEY_COMPLEX, 0.7,
+                    (0, 255, 0), 2)
+
+        return imgTemp
+
     def matchContourToMaster(self, contour, offset):
         for cnt in contour:
             for data in cnt:
@@ -224,7 +257,9 @@ class Targeting:
         # Updating the contours to match master image.
         LTContours = self.matchContourToMaster(LTContours, lowerImgLoc)
 
+        #Shows all found contours
         imgFP = self.drawContours(img, LTContours)
+
 
         # If the lower target is found then look for upper.
 
@@ -240,7 +275,7 @@ class Targeting:
                     lTar = cnt
 
             area = cv2.contourArea(lTar)
-            if area > 2000 and area < 60000:
+            if area > 2000 and area < 55000:
                 peri = cv2.arcLength(lTar, True)
                 approx = cv2.approxPolyDP(lTar, 0.02 * peri, True)
                 x, y, w, h = cv2.boundingRect(approx)
@@ -249,12 +284,23 @@ class Targeting:
                     upperImg = imgP2[0: int(w * 1.3), x: x + w]
                     # cv2.imshow("UpperArea", upperImg)
 
+                    #Painting the center of detected target bottom.
+                    imgFP = self.paintVerTarget(imgFP, cnt)
+
                     # Start of second tier processing.
                     # manualTune(upperImg)
 
                     HTContours = self.findUpperTarget(upperImg)
                     HTContours = self.matchContourToMaster(HTContours, ([0, x]))
                     imgFP = self.drawContours(imgFP, HTContours)
+
+
+
+        # Painting the X target.
+        imgFP = cv2.line(imgFP, ((int)(self.imgXPos), 0), ((int)(self.imgXPos), height), (0, 0, 255), 2)
+
+        #shoing onscreen the current offsets.
+
 
         cv2.imshow("Final", imgFP)
 
@@ -324,7 +370,11 @@ class Targeting:
             if(self.mode == 'test'):
                 img = self.screemGrab()     # Grabing from screen.
                 img = cv2.cvtColor(img, cv2.COLOR_BGRA2BGR)     # Converting compatible format.
-            
+
+            #Setting the current target settings.
+            height, width, channels = img.shape
+            self.imgXPos = width / 2 + self.camCenterToShooterCenterOffset
+
             self.findTargets(img)
 
             if cv2.waitKey(1) & 0xFF == ord('q'):

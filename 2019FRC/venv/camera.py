@@ -187,7 +187,8 @@ class Camera:
 
             #Taking an image
             if cv2.waitKey(1) & 0xFF == ord('p'):
-                cv2.imwrite(str(self.cameraID) + 'image.png', frame)
+                curDateTime = datetime.datetime.now().strftime("%Y-%m-%d-%H%M")
+                cv2.imwrite(str(self.cameraID) + '-' + curDateTime + 'image.png', frame)
 
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
